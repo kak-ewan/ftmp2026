@@ -1,0 +1,502 @@
+26-  sessionUser?: any;
+27:  setSessionUser?: (user: any) => void;
+28-  settings?: any;
+--
+31-
+32:export default function RegistrationSection({ onRegisterSuccess, sessionUser, setSessionUser, settings, onRefresh }: RegistrationSectionProps) {
+33-  // Authentication states
+34:  const [currentUser, setCurrentUser] = useState<any>(sessionUser || null); // { username: string, isAdmin: boolean, profile: any }
+35:  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+36-
+--
+38-  const handleSetCurrentUser = (val: any) => {
+39:    setCurrentUser((prev: any) => {
+40-      const nextUser = typeof val === 'function' ? val(prev) : val;
+41:      if (setSessionUser) {
+42:        setSessionUser(nextUser);
+43-      }
+--
+47-
+48:  const [editingPeserta, setEditingPeserta] = useState<Participant | null>(null);
+49:  const [pesertaIdToDelete, setPesertaIdToDelete] = useState<string | null>(null);
+50-  
+51-  // Login form status
+52:  const [loginForm, setLoginForm] = useState({ username: '', password: '' });
+53:  const [registerForm, setRegisterForm] = useState({
+54-    username: '',
+--
+63-  // DB Sync states
+64:  const [allAccounts, setAllAccounts] = useState<any[]>([]);
+65:  const [allSanggars, setAllSanggars] = useState<any[]>([]);
+66:  const [allPeserta, setAllPeserta] = useState<any[]>([]);
+67:  const [allTickets, setAllTickets] = useState<any[]>([]);
+68:  const [appscriptUrl, setAppscriptUrl] = useState('');
+69:  const [downloadableScripts, setDownloadableScripts] = useState<any[]>([]);
+70:  const [isLoading, setIsLoading] = useState(true);
+71-
+72-  // Active Pendaftar tab: 'sekolah' | 'peserta' | 'bayar'
+73:  const [pendaftarTab, setPendaftarTab] = useState<'sekolah' | 'peserta' | 'bayar'>('sekolah');
+74-
+75-  // School profile form (current logged in user)
+76:  const [schoolForm, setSchoolForm] = useState({
+77-    npsn: '',
+--
+91-  // Dynamic file upload labels/filenames
+92:  const [uploadedNames, setUploadedNames] = useState<Record<string, string>>({});
+93-
+94-  // Dynamic participant list
+95:  const [pesertaList, setPesertaList] = useState<Participant[]>([]);
+96:  const [showAddPesertaModal, setShowAddPesertaModal] = useState(false);
+97:  const [newPesertaForm, setNewPesertaForm] = useState({
+98-    id: '',
+--
+106-  });
+107:  const [pesertaPhotoName, setPesertaPhotoName] = useState('');
+108:  const [pesertaKartuName, setPesertaKartuName] = useState('');
+109-
+110-  // Admin operational states
+111:  const [adminSelectedSanggar, setAdminSelectedSanggar] = useState<any>(null);
+112:  const [adminActionStatus, setAdminActionStatus] = useState({ status: 'Disetujui', catatan: '' });
+113:  const [adminTab, setAdminTab] = useState<'peserta' | 'settings'>('peserta');
+114-  
+115-  // Quick hack state for settings editing to match the layout
+116:  const [settingsForm, setSettingsForm] = useState<any>({
+117-    heroTitle: '', heroDesc: '', juknisUrl: '', pelaksanaanTanggal: '', pelaksanaanTempat: '',
+--
+125-  
+126:  const [adminScripts, setAdminScripts] = useState<any[]>([]);
+127-
+128-  // Messages
+129:  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'err'; text: string } | null>(null);
+130:  const [isActionLoading, setIsActionLoading] = useState(false);
+131-
+--
+133-  const fetchDataset = async () => {
+134:    setIsLoading(true);
+135-    try {
+--
+138-        const db = await res.json();
+139:        setAllAccounts(db.accounts || []);
+140:        setAllSanggars(db.sanggars || []);
+141:        setAllPeserta(db.peserta || []);
+142:        setAllTickets(db.tickets || []);
+143:        setAppscriptUrl(db.appscriptUrl || '');
+144:        setDownloadableScripts(db.scripts || []);
+145:        setAdminScripts(db.scripts || []);
+146-
+--
+159-            // Prefill forms
+160:            setSchoolForm({
+161-              npsn: userSanggar?.npsn || userAcc.npsn || '',
+--
+174-
+175:            setPesertaList(userPeserta);
+176-          }
+--
+181-    } finally {
+182:      setIsLoading(false);
+183-    }
+--
+191-    if (settings) {
+192:      setSettingsForm(settings);
+193-    }
+--
+197-  const showNotification = (type: 'success' | 'err', text: string) => {
+198:    setStatusMessage({ type, text });
+199:    setTimeout(() => {
+200:      setStatusMessage(null);
+201-    }, 7000);
+--
+241-
+242:      setSchoolForm({
+243-        npsn: sData?.npsn || matchedAccount.npsn || '',
+--
+256-
+257:      setPesertaList(pData);
+258-      showNotification('success', `🎭 Selamat Datang, Sanggar ${matchedAccount.namaSanggar || matchedAccount.username}!`);
+--
+284-
+285:    setIsActionLoading(true);
+286-    try {
+--
+298-        // Set to login fields
+299:        setLoginForm({ username, password });
+300:        setAuthMode('login');
+301-        // Reset registration fields
+302:        setRegisterForm({
+303-          username: '',
+--
+317-    } finally {
+318:      setIsActionLoading(false);
+319-    }
+--
+334-      const baseString = reader.result as string;
+335:      setSchoolForm(prev => ({ ...prev, [fieldName]: baseString }));
+336:      setUploadedNames(prev => ({ ...prev, [fieldName]: file.name }));
+337-    };
+--
+358-      const baseString = reader.result as string;
+359:      setSchoolForm(prev => ({ ...prev, [fieldName]: baseString }));
+360:      setUploadedNames(prev => ({ ...prev, [fieldName]: file.name }));
+361-    };
+--
+374-
+375:    setIsActionLoading(true);
+376-    try {
+--
+405-        ) {
+406:          setPendaftarTab('peserta');
+407-        }
+--
+413-    } finally {
+414:      setIsActionLoading(false);
+415-    }
+--
+444-  const handleEditPeserta = (p: Participant) => {
+445:    setEditingPeserta(p);
+446:    setNewPesertaForm({
+447-      id: p.id,
+--
+455-    });
+456:    setPesertaPhotoName('Foto Saat Ini');
+457:    setPesertaKartuName(p.kartuPelajarFile ? 'Kartu Saat Ini' : '');
+458:    setShowAddPesertaModal(true);
+459-  };
+--
+462-  const handleCloseAddPesertaModal = () => {
+463:    setEditingPeserta(null);
+464:    setNewPesertaForm({
+465-      id: '',
+--
+473-    });
+474:    setPesertaPhotoName('');
+475:    setPesertaKartuName('');
+476:    setShowAddPesertaModal(false);
+477-  };
+--
+506-      });
+507:      setPesertaList(nextList);
+508-      handleSyncPesertaOnSheets(nextList);
+--
+522-      const nextList = [...pesertaList, item];
+523:      setPesertaList(nextList);
+524-      handleSyncPesertaOnSheets(nextList);
+--
+532-  const handleRemovePeserta = (id: string) => {
+533:    setPesertaIdToDelete(id);
+534-  };
+--
+538-      const nextList = pesertaList.filter(p => p.id !== pesertaIdToDelete);
+539:      setPesertaList(nextList);
+540-      handleSyncPesertaOnSheets(nextList);
+541:      setPesertaIdToDelete(null);
+542-      showNotification('success', 'Peserta berhasil dihapus dari daftar.');
+--
+552-
+553:    setIsActionLoading(true);
+554-    try {
+--
+575-    } finally {
+576:      setIsActionLoading(false);
+577-    }
+--
+581-  const handleAddAdminScript = () => {
+582:    setAdminScripts([...adminScripts, { id: 'sc-' + Date.now().toString(), judul: '', pengarang: '', sinopsis: '', fileUrl: '', size: '1 MB' }]);
+583-  };
+--
+587-    updated[idx] = { ...updated[idx], [field]: value };
+588:    setAdminScripts(updated);
+589-  };
+--
+593-    updated.splice(idx, 1);
+594:    setAdminScripts(updated);
+595-  };
+--
+597-  const handleSaveScripts = async () => {
+598:    setIsActionLoading(true);
+599-    try {
+--
+615-    } finally {
+616:      setIsActionLoading(false);
+617-    }
+--
+620-  const handleAdminVerifyPendaftar = async (username: string, isApproval: boolean) => {
+621:    setIsActionLoading(true);
+622-    const targetStatus = isApproval ? 'Disetujui' : 'Ditolak';
+--
+643-        showNotification('success', `Verification set to "${targetStatus}"! Email notifications triggered successfully.`);
+644:        setAdminSelectedSanggar(null);
+645:        setAdminActionStatus({ status: 'Disetujui', catatan: '' });
+646-        await fetchDataset();
+--
+652-    } finally {
+653:      setIsActionLoading(false);
+654-    }
+--
+658-    e.preventDefault();
+659:    setIsActionLoading(true);
+660-    try {
+--
+675-    } finally {
+676:      setIsActionLoading(false);
+677-    }
+--
+707-    reader.onload = () => {
+708:      setNewPesertaForm(prev => ({ ...prev, fotoFile: reader.result as string }));
+709:      setPesertaPhotoName(file.name);
+710-    };
+--
+719-    reader.onload = () => {
+720:      setNewPesertaForm(prev => ({ ...prev, kartuPelajarFile: reader.result as string }));
+721:      setPesertaKartuName(file.name);
+722-    };
+--
+897-                      value={loginForm.username}
+898:                      onChange={(e) => setLoginForm(prev => ({ ...prev, username: e.target.value }))}
+899-                      required
+--
+909-                      value={loginForm.password}
+910:                      onChange={(e) => setLoginForm(prev => ({ ...prev, password: e.target.value }))}
+911-                      required
+--
+926-                    type="button"
+927:                    onClick={() => setAuthMode('register')}
+928-                    className="font-bold text-amber-600 hover:underline"
+--
+948-                      value={registerForm.username}
+949:                      onChange={(e) => setRegisterForm(prev => ({ ...prev, username: e.target.value.toLowerCase().replace(/\s+/g, '') }))}
+950-                      required
+--
+960-                      value={registerForm.password}
+961:                      onChange={(e) => setRegisterForm(prev => ({ ...prev, password: e.target.value }))}
+962-                      required
+--
+973-                      value={registerForm.npsn}
+974:                      onChange={(e) => setRegisterForm(prev => ({ ...prev, npsn: e.target.value }))}
+975-                      required
+--
+986-                      value={registerForm.namaSekolah}
+987:                      onChange={(e) => setRegisterForm(prev => ({ ...prev, namaSekolah: e.target.value }))}
+988-                      required
+--
+998-                      value={registerForm.namaSanggar}
+999:                      onChange={(e) => setRegisterForm(prev => ({ ...prev, namaSanggar: e.target.value }))}
+1000-                      required
+--
+1010-                      value={registerForm.kontakPembina}
+1011:                      onChange={(e) => setRegisterForm(prev => ({ ...prev, kontakPembina: e.target.value }))}
+1012-                      required
+--
+1022-                      value={registerForm.email}
+1023:                      onChange={(e) => setRegisterForm(prev => ({ ...prev, email: e.target.value }))}
+1024-                      required
+--
+1040-                    type="button"
+1041:                    onClick={() => setAuthMode('login')}
+1042-                    className="font-bold text-amber-600 hover:underline"
+--
+1097-            <button
+1098:              onClick={() => setPendaftarTab('sekolah')}
+1099-              className={`flex-1 py-3 text-xs font-extrabold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+--
+1107-            <button
+1108:              onClick={() => isSchoolDataComplete ? setPendaftarTab('peserta') : showNotification('err', 'Selesaikan pengisian Data Sekolah & Berkas terlebih dahulu!')}
+1109-              disabled={!isSchoolDataComplete}
+--
+1118-            <button
+1119:              onClick={() => (isSchoolDataComplete && isPesertaDataComplete) ? setPendaftarTab('bayar') : showNotification('err', 'Selesaikan pendaftaran Peserta minimal 1 orang terlebih dahulu!')}
+1120-              disabled={!(isSchoolDataComplete && isPesertaDataComplete)}
+--
+1157-                    value={schoolForm.namaSekolah}
+1158:                    onChange={(e) => setSchoolForm(prev => ({ ...prev, namaSekolah: e.target.value }))}
+1159-                  />
+--
+1168-                    value={schoolForm.namaSanggar}
+1169:                    onChange={(e) => setSchoolForm(prev => ({ ...prev, namaSanggar: e.target.value }))}
+1170-                  />
+--
+1179-                    value={schoolForm.kontakPembina}
+1180:                    onChange={(e) => setSchoolForm(prev => ({ ...prev, kontakPembina: e.target.value }))}
+1181-                  />
+--
+1190-                    value={schoolForm.email}
+1191:                    onChange={(e) => setSchoolForm(prev => ({ ...prev, email: e.target.value }))}
+1192-                  />
+--
+1211-                          <a href={schoolForm.naskahFile} target="_blank" rel="noreferrer" className="text-[10px] text-blue-600 font-bold hover:underline">Unduh Berkas</a>
+1212:                          {!isDataLocked && <button onClick={() => setSchoolForm(prev => ({ ...prev, naskahFile: '' }))} className="text-[10px] text-red-500 hover:underline">Hapus</button>}
+1213-                        </div>
+--
+1231-                          <a href={schoolForm.plotLampu} target="_blank" rel="noreferrer" className="text-[10px] text-blue-600 font-bold hover:underline">Unduh Berkas</a>
+1232:                          {!isDataLocked && <button onClick={() => setSchoolForm(prev => ({ ...prev, plotLampu: '' }))} className="text-[10px] text-red-500 hover:underline">Hapus</button>}
+1233-                        </div>
+--
+1251-                          <a href={schoolForm.poster} target="_blank" rel="noreferrer" className="text-[10px] text-blue-600 font-bold hover:underline">Unduh Berkas</a>
+1252:                          {!isDataLocked && <button onClick={() => setSchoolForm(prev => ({ ...prev, poster: '' }))} className="text-[10px] text-red-500 hover:underline">Hapus</button>}
+1253-                        </div>
+--
+1271-                          <a href={schoolForm.artistik} target="_blank" rel="noreferrer" className="text-[10px] text-blue-600 font-bold hover:underline">Unduh Berkas</a>
+1272:                          {!isDataLocked && <button onClick={() => setSchoolForm(prev => ({ ...prev, artistik: '' }))} className="text-[10px] text-red-500 hover:underline">Hapus</button>}
+1273-                        </div>
+--
+1291-                          <a href={schoolForm.sinopsis} target="_blank" rel="noreferrer" className="text-[10px] text-blue-600 font-bold hover:underline">Unduh Berkas</a>
+1292:                          {!isDataLocked && <button onClick={() => setSchoolForm(prev => ({ ...prev, sinopsis: '' }))} className="text-[10px] text-red-500 hover:underline">Hapus</button>}
+1293-                        </div>
+--
+1311-                          <a href={schoolForm.profilSanggar} target="_blank" rel="noreferrer" className="text-[10px] text-blue-600 font-bold hover:underline">Unduh Berkas</a>
+1312:                          {!isDataLocked && <button onClick={() => setSchoolForm(prev => ({ ...prev, profilSanggar: '' }))} className="text-[10px] text-red-500 hover:underline">Hapus</button>}
+1313-                        </div>
+--
+1350-                  <button
+1351:                    onClick={() => setShowAddPesertaModal(true)}
+1352-                    className="inline-flex items-center gap-1 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl shadow-xs transition-transform transform active:scale-95 cursor-pointer"
+--
+1482-                      if (isSchoolDataComplete) {
+1483:                        setPendaftarTab('bayar');
+1484-                      } else {
+--
+1526-                          {!isDataLocked && (
+1527:                            <button onClick={() => setSchoolForm(prev => ({ ...prev, buktiPembayaran: '' }))} className="text-[10px] text-red-500 hover:underline">Hapus</button>
+1528-                          )}
+--
+1596-            <button 
+1597:              onClick={() => setAdminTab('peserta')}
+1598-              className={`flex-1 py-2 text-[11px] font-bold uppercase rounded-lg transition-all ${adminTab === 'peserta' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+--
+1602-            <button 
+1603:              onClick={() => setAdminTab('settings')}
+1604-              className={`flex-1 py-2 text-[11px] font-bold uppercase rounded-lg transition-all ${adminTab === 'settings' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+--
+1625-                        value={settingsForm.appLogo || ''} 
+1626:                        onChange={(e) => setSettingsForm({ ...settingsForm, appLogo: e.target.value })}
+1627-                        className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl bg-slate-50"
+--
+1635-                        value={settingsForm.heroTitle || ''} 
+1636:                        onChange={(e) => setSettingsForm({ ...settingsForm, heroTitle: e.target.value })}
+1637-                        className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl bg-slate-50"
+--
+1644-                        value={settingsForm.heroDesc || ''} 
+1645:                        onChange={(e) => setSettingsForm({ ...settingsForm, heroDesc: e.target.value })}
+1646-                        className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl bg-slate-50"
+--
+1653-                        value={settingsForm.juknisUrl || ''} 
+1654:                        onChange={(e) => setSettingsForm({ ...settingsForm, juknisUrl: e.target.value })}
+1655-                        className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl bg-slate-50"
+--
+1668-                          value={settingsForm.pelaksanaanTanggal || ''} 
+1669:                          onChange={(e) => setSettingsForm({ ...settingsForm, pelaksanaanTanggal: e.target.value })}
+1670-                          className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl bg-slate-50"
+--
+1677-                          value={settingsForm.pelaksanaanTempat || ''} 
+1678:                          onChange={(e) => setSettingsForm({ ...settingsForm, pelaksanaanTempat: e.target.value })}
+1679-                          className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl bg-slate-50"
+--
+1688-                        value={settingsForm.biayaRegistrasi || ''} 
+1689:                        onChange={(e) => setSettingsForm({ ...settingsForm, biayaRegistrasi: e.target.value })}
+1690-                        className="w-full text-xs px-3 py-2 border border-amber-200 rounded-lg bg-white"
+--
+1697-                            value={settingsForm.rekeningNomor || ''} 
+1698:                            onChange={(e) => setSettingsForm({ ...settingsForm, rekeningNomor: e.target.value })}
+1699-                            className="w-full text-[10px] px-2 py-1.5 border border-amber-200 rounded-lg bg-white"
+--
+1706-                            value={settingsForm.rekeningNama || ''} 
+1707:                            onChange={(e) => setSettingsForm({ ...settingsForm, rekeningNama: e.target.value })}
+1708-                            className="w-full text-[10px] px-2 py-1.5 border border-amber-200 rounded-lg bg-white"
+--
+1720-                          value={settingsForm.kontak1Nama || ''} 
+1721:                          onChange={(e) => setSettingsForm({ ...settingsForm, kontak1Nama: e.target.value })}
+1722-                          className="w-full text-[10px] px-2 py-1.5 border border-slate-200 rounded-lg bg-white mb-1"
+--
+1727-                          value={settingsForm.kontak1Hp || ''} 
+1728:                          onChange={(e) => setSettingsForm({ ...settingsForm, kontak1Hp: e.target.value })}
+1729-                          className="w-full text-[10px] px-2 py-1.5 border border-slate-200 rounded-lg bg-white"
+--
+1737-                          value={settingsForm.kontak2Nama || ''} 
+1738:                          onChange={(e) => setSettingsForm({ ...settingsForm, kontak2Nama: e.target.value })}
+1739-                          className="w-full text-[10px] px-2 py-1.5 border border-slate-200 rounded-lg bg-white mb-1"
+--
+1744-                          value={settingsForm.kontak2Hp || ''} 
+1745:                          onChange={(e) => setSettingsForm({ ...settingsForm, kontak2Hp: e.target.value })}
+1746-                          className="w-full text-[10px] px-2 py-1.5 border border-slate-200 rounded-lg bg-white"
+--
+1768-                          value={settingsForm.petunjuk1Title || ''} 
+1769:                          onChange={(e) => setSettingsForm({ ...settingsForm, petunjuk1Title: e.target.value })}
+1770-                          className="w-full text-xs px-3 py-1.5 border border-slate-200 rounded-xl bg-white"
+--
+1778-                          value={settingsForm.petunjuk1Desc || ''} 
+1779:                          onChange={(e) => setSettingsForm({ ...settingsForm, petunjuk1Desc: e.target.value })}
+1780-                          className="w-full text-xs px-3 py-1.5 border border-slate-200 rounded-xl bg-white"
+--
+1793-                          value={settingsForm.petunjuk2Title || ''} 
+1794:                          onChange={(e) => setSettingsForm({ ...settingsForm, petunjuk2Title: e.target.value })}
+1795-                          className="w-full text-xs px-3 py-1.5 border border-slate-200 rounded-xl bg-white"
+--
+1803-                          value={settingsForm.petunjuk2Desc || ''} 
+1804:                          onChange={(e) => setSettingsForm({ ...settingsForm, petunjuk2Desc: e.target.value })}
+1805-                          className="w-full text-xs px-3 py-1.5 border border-slate-200 rounded-xl bg-white"
+--
+1818-                          value={settingsForm.petunjuk3Title || ''} 
+1819:                          onChange={(e) => setSettingsForm({ ...settingsForm, petunjuk3Title: e.target.value })}
+1820-                          className="w-full text-xs px-3 py-1.5 border border-slate-200 rounded-xl bg-white"
+--
+1828-                          value={settingsForm.petunjuk3Desc || ''} 
+1829:                          onChange={(e) => setSettingsForm({ ...settingsForm, petunjuk3Desc: e.target.value })}
+1830-                          className="w-full text-xs px-3 py-1.5 border border-slate-200 rounded-xl bg-white"
+--
+1843-                          value={settingsForm.petunjuk4Title || ''} 
+1844:                          onChange={(e) => setSettingsForm({ ...settingsForm, petunjuk4Title: e.target.value })}
+1845-                          className="w-full text-xs px-3 py-1.5 border border-slate-200 rounded-xl bg-white"
+--
+1853-                          value={settingsForm.petunjuk4Desc || ''} 
+1854:                          onChange={(e) => setSettingsForm({ ...settingsForm, petunjuk4Desc: e.target.value })}
+1855-                          className="w-full text-xs px-3 py-1.5 border border-slate-200 rounded-xl bg-white"
+--
+1990-                        onClick={() => {
+1991:                          setAdminSelectedSanggar(acc);
+1992-                          // Prefill confirmation notes
+1993:                          setAdminActionStatus({ status: 'Disetujui', catatan: acc.catatan || '' });
+1994-                        }}
+--
+2118-                      <button
+2119:                        onClick={() => setAdminActionStatus(prev => ({ ...prev, status: 'Disetujui' }))}
+2120-                        className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
+--
+2129-                      <button
+2130:                        onClick={() => setAdminActionStatus(prev => ({ ...prev, status: 'Ditolak' }))}
+2131-                        className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
+--
+2147-                        value={adminActionStatus.catatan}
+2148:                        onChange={(e) => setAdminActionStatus(prev => ({ ...prev, catatan: e.target.value }))}
+2149-                      />
+--
+2264-                          value={newPesertaForm.nama}
+2265:                          onChange={(e) => setNewPesertaForm(prev => ({ ...prev, nama: e.target.value }))}
+2266-                          required
+--
+2275-                            value={newPesertaForm.peran}
+2276:                            onChange={(e) => setNewPesertaForm(prev => ({ ...prev, peran: e.target.value }))}
+2277-                          >
+--
+2297-                            value={newPesertaForm.jenisKelamin}
+2298:                            onChange={(e) => setNewPesertaForm(prev => ({ ...prev, jenisKelamin: e.target.value as any }))}
+2299-                          >
+--
+2313-                            value={newPesertaForm.namaTokoh}
+2314:                            onChange={(e) => setNewPesertaForm(prev => ({ ...prev, namaTokoh: e.target.value }))}
+2315-                            required={isActor}
+--
+2326-                          value={newPesertaForm.penyakitBawaan}
+2327:                          onChange={(e) => setNewPesertaForm(prev => ({ ...prev, penyakitBawaan: e.target.value }))}
+2328-                        />
+--
+2339-                            <span className="text-[10px] text-slate-500 truncate grow">{pesertaPhotoName || 'Pas Foto Terunggah'}</span>
+2340:                            <button type="button" onClick={() => setNewPesertaForm(prev => ({ ...prev, fotoFile: '' }))} className="text-[10px] text-red-500 font-bold cursor-pointer">Hapus</button>
+2341-                          </div>
+--
+2356-                            <span className="text-[10px] text-slate-500 truncate grow">{pesertaKartuName || 'Kartu Identitas Terunggah'}</span>
+2357:                            <button type="button" onClick={() => setNewPesertaForm(prev => ({ ...prev, kartuPelajarFile: '' }))} className="text-[10px] text-red-500 font-bold cursor-pointer">Hapus</button>
+2358-                          </div>
+--
+2420-                    type="button"
+2421:                    onClick={() => setPesertaIdToDelete(null)}
+2422-                    className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs hover:bg-slate-50 font-bold transition-all cursor-pointer"

@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Remix: Festival Teater Modern Pelajar",
+  "description": "Web Festival Teater Modern Pelajar SMA/SMK/MA XXVI Se-NTB 2026. Portal pendaftaran online, unduhan naskah, publikasi info, ticketing, dan dashboard admin terpadu.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

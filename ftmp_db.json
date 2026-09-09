@@ -1,0 +1,105 @@
+{
+  "accounts": [
+    {
+      "username": "sekolah_teladan",
+      "password": "rahasia123",
+      "npsn": "50201234",
+      "namaSekolah": "SMA Negeri 1 Mataram",
+      "namaSanggar": "Teater Semburat",
+      "kontakPembina": 8123456789,
+      "email": "sekolah_teladan@gmail.com",
+      "status": "Pending",
+      "catatan": "",
+      "waktuDaftar": "2026-09-09T13:48:56.213Z"
+    }
+  ],
+  "sanggars": [],
+  "peserta": [],
+  "tickets": [],
+  "ticketSettings": {},
+  "appscriptUrl": "https://script.google.com/macros/s/AKfycbwfLmr5wD5whowru67yJ51ePa2Wz7FCNos87QRAv-2ne2bnahpwAAHJAOZGxhrbc0Iccw/exec",
+  "scripts": [
+    {
+      "id": "sc-1",
+      "judul": "Ayahku Pulang",
+      "pengarang": "Usmar Ismail",
+      "sinopsis": "Drama keluarga yang mengisahkan kembalinya seorang ayah setelah bertahun-tahun meninggalkan keluarganya, tepat pada saat hari raya raya, membawa konflik batin di antara anak-anaknya.",
+      "fileUrl": "https://docs.google.com/document/d/150X7LzXp2m-n_K5qX5I2mS_U1X0Lp_T_demo1/edit?usp=sharing",
+      "size": "1.2 MB"
+    },
+    {
+      "id": "sc-2",
+      "judul": "Bila Malam Bertambah Malam",
+      "pengarang": "Putu Wijaya",
+      "sinopsis": "Sebuah naskah drama psikologis yang menyoroti konflik kasta, cinta, dan kehormatan di Bali, menggambarkan pertentangan emosi yang mendalam antara kaum bangsawan dan rakyat jelata.",
+      "fileUrl": "https://docs.google.com/document/d/150X7LzXp2m-n_K5qX5I2mS_U1X0Lp_T_demo2/edit?usp=sharing",
+      "size": "850 KB"
+    },
+    {
+      "id": "sc-3",
+      "judul": "RT Nol RW Nol",
+      "pengarang": "Iwan Simatupang",
+      "sinopsis": "Naskah absurd yang menceritakan kehidupan kaum gelandangan di bawah kolong jembatan, menggambarkan potret kemanusiaan, mimpi-mimpi sederhana, serta kritik sosial yang mendalam.",
+      "fileUrl": "https://docs.google.com/document/d/150X7LzXp2m-n_K5qX5I2mS_U1X0Lp_T_demo3/edit?usp=sharing",
+      "size": "1.5 MB"
+    },
+    {
+      "id": "sc-1788708392210",
+      "judul": "ANJING-ANJING MENYERBU KUBURAN",
+      "pengarang": "Puthut Buchori",
+      "sinopsis": "",
+      "fileUrl": "https://drive.google.com/drive/folders/1iV14ogwy01WoB0ZusAmVLVZ0opSZ4jcY?hl=id",
+      "size": "1 MB"
+    },
+    {
+      "id": "sc-1788708472426",
+      "judul": "MATAHARI DI SEBUAH JALAN KECIL",
+      "pengarang": "Arifin C Noor",
+      "sinopsis": "",
+      "fileUrl": "https://docs.google.com/document/d/1vq1jd7HugXZv77Wi0Q_xL4B0eiyKZgmg/edit?usp=drive_link&ouid=108169343383473648092&rtpof=true&sd=true",
+      "size": "1 MB"
+    },
+    {
+      "id": "sc-1788708540457",
+      "judul": "AKAL BULUS SCAPIN",
+      "pengarang": "Jean Baptiste Poquelin’Moliere’",
+      "sinopsis": "",
+      "fileUrl": "https://docs.google.com/document/d/1QpBUOHFdr33icvYZ6uy9da3GpmQtzKgW/edit?usp=drive_link&ouid=108169343383473648092&rtpof=true&sd=true",
+      "size": "1 MB"
+    }
+  ],
+  "globalSettings": {
+    "appLogo": "/ftmp.png",
+    "heroTitle": "Festival Teater Modern Pelajar",
+    "heroDesc": "Daftarkan kelompok teater dari sekolahmu dan berlagalah pada panggung bergengsi FTMP XXVI. Tunjukkan tajimu, menangkan Piala Bergilir!",
+    "juknisUrl": "https://www.google.com/",
+    "pelaksanaanTanggal": "9 s.d. 20 November 2026",
+    "pelaksanaanTempat": "Arena Terbuka Taman Budaya Provinsi Nusa Tenggara Barat",
+    "biayaRegistrasi": 350000,
+    "rekeningNomor": "3495-01-046321-533",
+    "rekeningNama": "Teater Putih",
+    "kontak1Nama": "Liza Hafsa",
+    "kontak1Hp": 81906901245,
+    "kontak2Nama": "Bq Dinda Puspita Rinjani",
+    "kontak2Hp": 87855375689,
+    "kontakTiketNama": "Admin Tiketing FTMP",
+    "kontakTiketHp": 81906901245,
+    "downloadImageUrl": "https://picsum.photos/seed/ftmp/800/1200",
+    "downloadImageTitle": "Poster Resmi FTMP XXVI",
+    "downloadImages": [
+      {
+        "id": "img-1",
+        "url": "https://picsum.photos/seed/ftmp/800/1200",
+        "title": "Poster Resmi FTMP XXVI"
+      }
+    ],
+    "petunjuk1Title": "Batas SARA & Pornografi",
+    "petunjuk1Desc": "Naskah dan pementasan murni seni kreatif, tidak boleh mengandung SARA, pornografi, maupun pornoaksi.",
+    "petunjuk2Title": "Konstruksi & Bentuk Realis",
+    "petunjuk2Desc": "Naskah drama harus memiliki konstruksi dramatik yang kuat serta disajikan dalam bentuk pementasan realis.",
+    "petunjuk3Title": "Durasi Pertunjukan",
+    "petunjuk3Desc": "Setiap kelompok/sanggar teater diberikan waktu mentas maksimal 45 menit lengkap.",
+    "petunjuk4Title": "Komposisi Tim",
+    "petunjuk4Desc": "Siswa aktif di NTB. Panitia menyediakan ID Card untuk 20 peserta dan Tim + 1 Pelatih + 1 Pembina + 1 Sutradara + 1 Pubdok + 1 Stage Manager."
+  }
+}

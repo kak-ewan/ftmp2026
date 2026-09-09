@@ -40,9 +40,11 @@ export default function Home() {
 
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchDatabase = async () => {
+  const fetchDatabase = async (forceSync = false) => {
     try {
-      const res = await fetch('/api/data');
+      const res = await fetch(`/api/data${forceSync ? '?sync=true' : ''}`, {
+        cache: 'no-store'
+      });
       if (res.ok) {
         const data = await res.json();
         setDbState(data);
@@ -205,7 +207,7 @@ export default function Home() {
             >
               {activeTab === 'beranda' && <HeroSection onNavigate={handleNavigate} settings={dbState.globalSettings} />}
               {activeTab === 'informasi' && <InfoSection settings={dbState.globalSettings} />}
-              {activeTab === 'pendaftaran' && <RegistrationSection sessionUser={sessionUser} setSessionUser={handleSetSessionUser} settings={dbState} onRefresh={fetchDatabase} />}
+              {activeTab === 'pendaftaran' && <RegistrationSection sessionUser={sessionUser} setSessionUser={handleSetSessionUser} settings={dbState} onRefresh={() => fetchDatabase(true)} />}
               {activeTab === 'tiket' && <TicketingSection settings={dbState} />}
               {activeTab === 'naskah' && <ScriptDownloadSection scripts={dbState.scripts} />}
               {activeTab === 'unduh-gambar' && <ImageDownloadSection settings={dbState} />}

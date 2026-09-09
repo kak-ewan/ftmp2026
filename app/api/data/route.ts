@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 
-const DB_FILE = path.join(process.cwd(), 'ftmp_db.json');
+// Path fallback: Vercel serverless functions have a read-only root filesystem, but /tmp is writable
+const LOCAL_DB_FILE = path.join(process.cwd(), 'ftmp_db.json');
+const TMP_DB_FILE = path.join(os.tmpdir(), 'ftmp_db.json');
+
+declare global {
+  var __FTMP_IN_MEMORY_DB__: DBState | undefined;
+  var __FTMP_LAST_SYNC_TIME__: number | undefined;
+}
 
 const DEFAULT_SCRIPTS = [
   {
@@ -114,158 +122,300 @@ function parseDownloadImages(raw: any): any[] {
 }
 
 function getDB(): DBState {
-  try {
-    if (fs.existsSync(DB_FILE)) {
-      const data = fs.readFileSync(DB_FILE, 'utf8');
-      const parsed = JSON.parse(data);
-      if (!parsed.accounts) parsed.accounts = [];
-      if (!parsed.sanggars) parsed.sanggars = [];
-      if (!parsed.peserta) parsed.peserta = [];
-      if (!parsed.tickets) parsed.tickets = [];
-      if (!parsed.ticketSettings) parsed.ticketSettings = {
-        sessions: [
-          { id: 'sess-1', date: '2026-11-09', time: '19:00', title: 'Malam Pembukaan & Pementasan 1', available: true },
-          { id: 'sess-2', date: '2026-11-10', time: '16:00', title: 'Sesi Sore 1', available: true },
-          { id: 'sess-3', date: '2026-11-10', time: '19:30', title: 'Sesi Malam 1', available: true },
-        ],
-        price: '25000',
-        seatRows: [
-          { rowName: 'A (VIP)', seatCount: 15 },
-          { rowName: 'B', seatCount: 20 },
-          { rowName: 'C', seatCount: 25 },
-          { rowName: 'D', seatCount: 25 },
-        ],
-        paymentMethods: [
-          { id: 'pay-1', bankName: 'BRI', accountNumber: '3495-01-046321-533', accountName: 'Teater Putih' },
-          { id: 'pay-2', bankName: 'DANA/OVO/GoPay', accountNumber: '081234567890', accountName: 'Bendahara FTMP' }
-        ]
-      };
-      
-      const envAppScriptUrl = process.env.APPS_SCRIPT_URL?.trim();
-      if (envAppScriptUrl && envAppScriptUrl !== '') {
-        parsed.appscriptUrl = envAppScriptUrl;
-      } else if (!parsed.appscriptUrl) {
-        parsed.appscriptUrl = 'https://script.google.com/macros/s/AKfycbwfLmr5wD5whowru67yJ51ePa2Wz7FCNos87QRAv-2ne2bnahpwAAHJAOZGxhrbc0Iccw/exec';
-      }
-
-      if (!parsed.scripts) parsed.scripts = DEFAULT_SCRIPTS;
-      if (!parsed.globalSettings) parsed.globalSettings = {};
-      const defaultSettings = {
-        appLogo: '/ftmp.png',
-        heroTitle: 'Festival Teater Modern Pelajar',
-        heroDesc: 'Daftarkan kelompok teater dari sekolahmu dan berlagalah pada panggung bergengsi FTMP XXVI. Tunjukkan tajimu, menangkan Piala Bergilir!',
-        juknisUrl: '#',
-        pelaksanaanTanggal: '9 s.d. 20 November 2026',
-        pelaksanaanTempat: 'Arena Terbuka Taman Budaya Provinsi Nusa Tenggara Barat',
-        biayaRegistrasi: 'Rp350.000',
-        rekeningNomor: '3495-01-046321-533',
-        rekeningNama: 'Teater Putih',
-        kontak1Nama: 'Liza Hafsa',
-        kontak1Hp: '081906901245',
-        kontak2Nama: 'Bq Dinda Puspita Rinjani',
-        kontak2Hp: '087855375689',
-        kontakTiketNama: 'Admin Tiketing FTMP',
-        kontakTiketHp: '081906901245',
-        downloadImageUrl: 'https://picsum.photos/seed/ftmp/800/1200',
-        downloadImageTitle: 'Poster Resmi FTMP XXVI',
-        downloadImages: [
-          { id: 'img-1', title: 'Poster Resmi FTMP XXVI', url: 'https://picsum.photos/seed/ftmp/800/1200' },
-          { id: 'img-2', title: 'Pamflet Ketentuan Peserta', url: 'https://picsum.photos/seed/teater/800/1200' }
-        ],
-        petunjuk1Title: 'Batas SARA & Pornografi',
-        petunjuk1Desc: 'Naskah dan pementasan murni seni kreatif, tidak boleh mengandung SARA, pornografi, maupun pornoaksi.',
-        petunjuk2Title: 'Konstruksi & Bentuk Realis',
-        petunjuk2Desc: 'Naskah drama harus memiliki konstruksi dramatik yang kuat serta disajikan dalam bentuk pementasan realis.',
-        petunjuk3Title: 'Durasi Pertunjukan',
-        petunjuk3Desc: 'Setiap kelompok/sanggar teater diberikan waktu mentas maksimal 45 menit lengkap.',
-        petunjuk4Title: 'Komposisi Tim',
-        petunjuk4Desc: 'Siswa aktif di NTB. Panitia menyediakan ID Card untuk 20 peserta dan Tim + 1 Pelatih + 1 Pembina + 1 Sutradara + 1 Pubdok + 1 Stage Manager.'
-      };
-      parsed.globalSettings = { ...defaultSettings, ...parsed.globalSettings };
-      const parsedImages = parseDownloadImages(parsed.globalSettings.downloadImages);
-      parsed.globalSettings.downloadImages = parsedImages.length > 0 ? parsedImages : defaultSettings.downloadImages;
-      return parsed;
+  // 1. Return in-memory cached state if available in this Lambda/Node container
+  if (globalThis.__FTMP_IN_MEMORY_DB__) {
+    const envAppScriptUrl = process.env.APPS_SCRIPT_URL?.trim() || process.env.NEXT_PUBLIC_APPS_SCRIPT_URL?.trim();
+    if (envAppScriptUrl && envAppScriptUrl !== '') {
+      globalThis.__FTMP_IN_MEMORY_DB__.appscriptUrl = envAppScriptUrl;
     }
-  } catch (error) {
-    console.error('Error reading DB:', error);
+    return globalThis.__FTMP_IN_MEMORY_DB__;
   }
-  const defaultAppScriptUrl = process.env.APPS_SCRIPT_URL?.trim() || 'https://script.google.com/macros/s/AKfycbwfLmr5wD5whowru67yJ51ePa2Wz7FCNos87QRAv-2ne2bnahpwAAHJAOZGxhrbc0Iccw/exec';
-  return {
-    accounts: [],
-    sanggars: [],
-    peserta: [],
-    tickets: [],
-    ticketSettings: {
-      sessions: [
-        { id: 'sess-1', date: '2026-11-09', time: '19:00', title: 'Malam Pembukaan & Pementasan 1', available: true },
-        { id: 'sess-2', date: '2026-11-10', time: '16:00', title: 'Sesi Sore 1', available: true },
-        { id: 'sess-3', date: '2026-11-10', time: '19:30', title: 'Sesi Malam 1', available: true },
-      ],
-      price: '25000',
-      seatRows: [
-        { rowName: 'A (VIP)', seatCount: 15 },
-        { rowName: 'B', seatCount: 20 },
-        { rowName: 'C', seatCount: 25 },
-        { rowName: 'D', seatCount: 25 },
-      ],
-      paymentMethods: [
-        { id: 'pay-1', bankName: 'BRI', accountNumber: '3495-01-046321-533', accountName: 'Teater Putih' },
-        { id: 'pay-2', bankName: 'DANA/OVO/GoPay', accountNumber: '081234567890', accountName: 'Bendahara FTMP' }
-      ]
-    },
-    appscriptUrl: defaultAppScriptUrl,
-    scripts: DEFAULT_SCRIPTS,
-    globalSettings: {
-      appLogo: '/ftmp.png',
-      heroTitle: 'Festival Teater Modern Pelajar',
-      heroDesc: 'Daftarkan kelompok teater dari sekolahmu dan berlagalah pada panggung bergengsi FTMP XXVI. Tunjukkan tajimu, menangkan Piala Bergilir!',
-      juknisUrl: '#',
-      pelaksanaanTanggal: '9 s.d. 20 November 2026',
-      pelaksanaanTempat: 'Arena Terbuka Taman Budaya Provinsi Nusa Tenggara Barat',
-      biayaRegistrasi: 'Rp350.000',
-      rekeningNomor: '3495-01-046321-533',
-      rekeningNama: 'Teater Putih',
-      kontak1Nama: 'Liza Hafsa',
-      kontak1Hp: '081906901245',
-      kontak2Nama: 'Bq Dinda Puspita Rinjani',
-      kontak2Hp: '087855375689',
-      kontakTiketNama: 'Admin Tiketing FTMP',
-      kontakTiketHp: '081906901245',
-      downloadImageUrl: 'https://picsum.photos/seed/ftmp/800/1200',
-      downloadImageTitle: 'Poster Resmi FTMP XXVI',
-      downloadImages: [
-        { id: 'img-1', title: 'Poster Resmi FTMP XXVI', url: 'https://picsum.photos/seed/ftmp/800/1200' },
-        { id: 'img-2', title: 'Pamflet Ketentuan Peserta', url: 'https://picsum.photos/seed/teater/800/1200' }
-      ],
-      petunjuk1Title: 'Batas SARA & Pornografi',
-      petunjuk1Desc: 'Naskah dan pementasan murni seni kreatif, tidak boleh mengandung SARA, pornografi, maupun pornoaksi.',
-      petunjuk2Title: 'Konstruksi & Bentuk Realis',
-      petunjuk2Desc: 'Naskah drama harus memiliki konstruksi dramatik yang kuat serta disajikan dalam bentuk pementasan realis.',
-      petunjuk3Title: 'Durasi Pertunjukan',
-      petunjuk3Desc: 'Setiap kelompok/sanggar teater diberikan waktu mentas maksimal 45 menit lengkap.',
-      petunjuk4Title: 'Komposisi Tim',
-      petunjuk4Desc: 'Siswa aktif di NTB. Panitia menyediakan ID Card untuk 20 peserta dan Tim + 1 Pelatih + 1 Pembina + 1 Sutradara + 1 Pubdok + 1 Stage Manager.'
+
+  // 2. Read from writable /tmp filesystem (Vercel serverless persistence during container lifecycle)
+  let rawData: string | null = null;
+  if (fs.existsSync(TMP_DB_FILE)) {
+    try {
+      rawData = fs.readFileSync(TMP_DB_FILE, 'utf8');
+    } catch (e) {
+      console.warn('Unable to read from TMP_DB_FILE:', e);
     }
+  }
+
+  // 3. Fallback to bundled local ftmp_db.json
+  if (!rawData && fs.existsSync(LOCAL_DB_FILE)) {
+    try {
+      rawData = fs.readFileSync(LOCAL_DB_FILE, 'utf8');
+    } catch (e) {
+      console.warn('Unable to read from LOCAL_DB_FILE:', e);
+    }
+  }
+
+  const defaultSettings = {
+    appLogo: '/ftmp.png',
+    heroTitle: 'Festival Teater Modern Pelajar',
+    heroDesc: 'Daftarkan kelompok teater dari sekolahmu dan berlagalah pada panggung bergengsi FTMP XXVI. Tunjukkan tajimu, menangkan Piala Bergilir!',
+    juknisUrl: '#',
+    pelaksanaanTanggal: '9 s.d. 20 November 2026',
+    pelaksanaanTempat: 'Arena Terbuka Taman Budaya Provinsi Nusa Tenggara Barat',
+    biayaRegistrasi: 'Rp350.000',
+    rekeningNomor: '3495-01-046321-533',
+    rekeningNama: 'Teater Putih',
+    kontak1Nama: 'Liza Hafsa',
+    kontak1Hp: '081906901245',
+    kontak2Nama: 'Bq Dinda Puspita Rinjani',
+    kontak2Hp: '087855375689',
+    kontakTiketNama: 'Admin Tiketing FTMP',
+    kontakTiketHp: '081906901245',
+    downloadImageUrl: 'https://picsum.photos/seed/ftmp/800/1200',
+    downloadImageTitle: 'Poster Resmi FTMP XXVI',
+    downloadImages: [
+      { id: 'img-1', title: 'Poster Resmi FTMP XXVI', url: 'https://picsum.photos/seed/ftmp/800/1200' },
+      { id: 'img-2', title: 'Pamflet Ketentuan Peserta', url: 'https://picsum.photos/seed/teater/800/1200' }
+    ],
+    petunjuk1Title: 'Batas SARA & Pornografi',
+    petunjuk1Desc: 'Naskah dan pementasan murni seni kreatif, tidak boleh mengandung SARA, pornografi, maupun pornoaksi.',
+    petunjuk2Title: 'Konstruksi & Bentuk Realis',
+    petunjuk2Desc: 'Naskah drama harus memiliki konstruksi dramatik yang kuat serta disajikan dalam bentuk pementasan realis.',
+    petunjuk3Title: 'Durasi Pertunjukan',
+    petunjuk3Desc: 'Setiap kelompok/sanggar teater diberikan waktu mentas maksimal 45 menit lengkap.',
+    petunjuk4Title: 'Komposisi Tim',
+    petunjuk4Desc: 'Siswa aktif di NTB. Panitia menyediakan ID Card untuk 20 peserta dan Tim + 1 Pelatih + 1 Pembina + 1 Sutradara + 1 Pubdok + 1 Stage Manager.'
   };
+
+  const defaultTicketSettings = {
+    sessions: [
+      { id: 'sess-1', date: '2026-11-09', time: '19:00', title: 'Malam Pembukaan & Pementasan 1', available: true },
+      { id: 'sess-2', date: '2026-11-10', time: '16:00', title: 'Sesi Sore 1', available: true },
+      { id: 'sess-3', date: '2026-11-10', time: '19:30', title: 'Sesi Malam 1', available: true },
+    ],
+    price: '25000',
+    seatRows: [
+      { rowName: 'A (VIP)', seatCount: 15 },
+      { rowName: 'B', seatCount: 20 },
+      { rowName: 'C', seatCount: 25 },
+      { rowName: 'D', seatCount: 25 },
+    ],
+    paymentMethods: [
+      { id: 'pay-1', bankName: 'BRI', accountNumber: '3495-01-046321-533', accountName: 'Teater Putih' },
+      { id: 'pay-2', bankName: 'DANA/OVO/GoPay', accountNumber: '081234567890', accountName: 'Bendahara FTMP' }
+    ]
+  };
+
+  let parsed: any = {};
+  if (rawData) {
+    try {
+      parsed = JSON.parse(rawData);
+    } catch (e) {
+      console.error('Error parsing DB JSON:', e);
+    }
+  }
+
+  if (!parsed.accounts) parsed.accounts = [];
+  if (!parsed.sanggars) parsed.sanggars = [];
+  if (!parsed.peserta) parsed.peserta = [];
+  if (!parsed.tickets) parsed.tickets = [];
+  if (!parsed.ticketSettings || Object.keys(parsed.ticketSettings).length === 0) {
+    parsed.ticketSettings = defaultTicketSettings;
+  }
+  
+  const envAppScriptUrl = process.env.APPS_SCRIPT_URL?.trim() || process.env.NEXT_PUBLIC_APPS_SCRIPT_URL?.trim();
+  if (envAppScriptUrl && envAppScriptUrl !== '') {
+    parsed.appscriptUrl = envAppScriptUrl;
+  } else if (!parsed.appscriptUrl) {
+    parsed.appscriptUrl = 'https://script.google.com/macros/s/AKfycbwfLmr5wD5whowru67yJ51ePa2Wz7FCNos87QRAv-2ne2bnahpwAAHJAOZGxhrbc0Iccw/exec';
+  }
+
+  if (!parsed.scripts || parsed.scripts.length === 0) parsed.scripts = DEFAULT_SCRIPTS;
+  if (!parsed.globalSettings) parsed.globalSettings = {};
+  parsed.globalSettings = { ...defaultSettings, ...parsed.globalSettings };
+  const parsedImages = parseDownloadImages(parsed.globalSettings.downloadImages);
+  parsed.globalSettings.downloadImages = parsedImages.length > 0 ? parsedImages : defaultSettings.downloadImages;
+
+  // Cache in globalThis
+  globalThis.__FTMP_IN_MEMORY_DB__ = parsed;
+  return parsed;
 }
 
 /**
- * Penyimpanan Atomik: Menulis ke file sementara terlebih dahulu, kemudian me-rename secara atomik.
- * Mencegah file corrupt jika server di-restart atau ada proses lain saat penulisan berlangsung.
+ * Penyimpanan Serverless-Safe:
+ * 1. Simpan ke in-memory cache global.
+ * 2. Tulis ke /tmp (direktori yang selalu dapat ditulis di lingkungan Vercel/Serverless).
+ * 3. Tulis ke process.cwd() jika lingkungan mengizinkan (local dev / container writable). Jika EROFS (Vercel), abaikan dengan aman.
  */
 function saveDB(state: DBState) {
+  // 1. Update in-memory state
+  globalThis.__FTMP_IN_MEMORY_DB__ = state;
+
+  const serialized = JSON.stringify(state, null, 2);
+
+  // 2. Write to /tmp (Vercel serverless writable folder)
   try {
-    const tempFile = `${DB_FILE}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`;
-    fs.writeFileSync(tempFile, JSON.stringify(state, null, 2), 'utf8');
-    fs.renameSync(tempFile, DB_FILE);
-  } catch (error) {
-    console.error('Error writing DB atomically, falling back to direct write:', error);
+    const tempFile = `${TMP_DB_FILE}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`;
+    fs.writeFileSync(tempFile, serialized, 'utf8');
+    fs.renameSync(tempFile, TMP_DB_FILE);
+  } catch (tmpErr) {
     try {
-      fs.writeFileSync(DB_FILE, JSON.stringify(state, null, 2), 'utf8');
-    } catch (directErr) {
-      console.error('Fatal error writing DB:', directErr);
+      fs.writeFileSync(TMP_DB_FILE, serialized, 'utf8');
+    } catch (e) {
+      console.warn('Failed to write to TMP_DB_FILE:', e);
     }
   }
+
+  // 3. Attempt write to local filesystem (Cloud Run / Local Dev)
+  try {
+    const tempFile = `${LOCAL_DB_FILE}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`;
+    fs.writeFileSync(tempFile, serialized, 'utf8');
+    fs.renameSync(tempFile, LOCAL_DB_FILE);
+  } catch (localErr: any) {
+    // EROFS (Read-only file system) is expected on Vercel deployments and must not crash
+    if (localErr?.code !== 'EROFS') {
+      try {
+        fs.writeFileSync(LOCAL_DB_FILE, serialized, 'utf8');
+      } catch (e) {
+        // Safe ignore
+      }
+    }
+  }
+}
+
+/**
+ * Tarik data terbaru dari Google Sheets sebagai Single Source of Truth
+ */
+async function syncFromGoogleSheets(db: DBState): Promise<boolean> {
+  const url = db.appscriptUrl?.trim();
+  if (!url || !url.startsWith('https://script.google.com/')) {
+    return false;
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'get_all_data' }),
+      signal: controller.signal,
+      cache: 'no-store'
+    });
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      console.warn(`Apps Script fetch returned HTTP status ${res.status}`);
+      return false;
+    }
+
+    const rawText = await res.text();
+    if (rawText.startsWith('<!DOCTYPE') || rawText.includes('<html')) {
+      console.warn('Google Apps Script returned HTML instead of JSON. Ensure "Who has access" is set to "Anyone" and Web App is deployed.');
+      return false;
+    }
+
+    const result = JSON.parse(rawText);
+    if (result.success && result.data) {
+      // 1. Accounts
+      const fetchedAccounts = (result.data.accounts || []).map((acc: any) => ({
+        username: normStr(acc.Username || ''),
+        password: acc.Password || '',
+        npsn: sanitizeNpsn(acc.NPSN || acc.npsn || ''),
+        namaSekolah: acc.Nama_Sekolah || '',
+        namaSanggar: acc.Nama_Sanggar || '',
+        kontakPembina: acc.Kontak_Pembina || '',
+        email: acc.Email || '',
+        status: acc.Status_Verifikasi || 'Draft',
+        catatan: acc.Catatan_Verifikasi || '',
+        waktuDaftar: acc.Waktu_Pendaftaran || ''
+      }));
+
+      // 2. Sanggars
+      const fetchedSanggars = (result.data.sanggars || []).map((s: any) => ({
+        username: normStr(s.Username || ''),
+        namaSekolah: s.Nama_Sekolah || '',
+        namaSanggar: s.Nama_Sanggar || '',
+        kontakPembina: s.Kontak_Pembina || '',
+        email: s.Email || '',
+        naskahFile: s.Naskah_File_URL || '',
+        plotLampu: s.Plot_Lampu_URL || '',
+        poster: s.Poster_URL || '',
+        artistik: s.Desain_Artistik_URL || '',
+        sinopsis: s.Sinopsis_URL || '',
+        profilSanggar: s.Profil_Sanggar_URL || '',
+        buktiPembayaran: s.Bukti_Pembayaran_URL || '',
+        waktuUpdate: s.Waktu_Update || ''
+      }));
+
+      // 3. Peserta
+      const fetchedPeserta = (result.data.peserta || []).map((p: any) => ({
+        username: normStr(p.Username || ''),
+        id: p.ID_Peserta || '',
+        nama: p.Nama_Sesuai_Ijazah || '',
+        peran: p.Peran_Kategori || '',
+        namaTokoh: p.Nama_Tokoh || '',
+        jenisKelamin: p.Jenis_Kelamin || '',
+        penyakitBawaan: p.Penyakit_Bawaan || '',
+        fotoFile: p.Foto_3x4_URL || '',
+        waktuUpdate: p.Waktu_Update || ''
+      }));
+
+      // 4. Tickets
+      const fetchedTickets = (result.data.tickets || []).map((t: any) => ({
+        id: t.ID_Tiket || t.id || '',
+        namaPemesan: t.Nama_Pemesan || t.namaPemesan || '',
+        email: t.Email || t.email || '',
+        noHp: t.No_HP || t.noHp || '',
+        jumlah: Number(t.Jumlah_Tiket || t.jumlah) || 1,
+        kategori: t.Kategori || t.kategori || 'Reguler',
+        tanggalPementasan: t.Tanggal_Pementasan || t.tanggalPementasan || '',
+        kursi: typeof t.Daftar_Kursi === 'string' ? t.Daftar_Kursi.split(', ') : (Array.isArray(t.kursi) ? t.kursi : []),
+        status: t.Status_Pembayaran || t.status || 'Unpaid',
+        tanggalPesan: t.Waktu_Booking || t.tanggalPesan || '',
+        buktiPembayaran: t.Bukti_Pembayaran || t.buktiPembayaran || ''
+      }));
+
+      // 5. Scripts
+      if (result.data.scripts && result.data.scripts.length > 0) {
+        db.scripts = result.data.scripts.map((s: any) => ({
+          id: s.ID_Script || s.id || '',
+          judul: s.Judul || '',
+          pengarang: s.Pengarang || s.Penulis || '',
+          sinopsis: s.Sinopsis || '',
+          fileUrl: s.File_URL || s.fileUrl || '',
+          size: s.Ukuran || s.size || ''
+        }));
+      }
+
+      // 6. Global Settings
+      if (result.data.settings && result.data.settings.length > 0) {
+        const settingsMap: any = {};
+        result.data.settings.forEach((item: any) => {
+          if (item.Key) {
+            settingsMap[item.Key] = item.Value !== undefined ? item.Value : '';
+          }
+        });
+        db.globalSettings = { ...db.globalSettings, ...settingsMap };
+        if (db.globalSettings.downloadImages !== undefined) {
+          db.globalSettings.downloadImages = parseDownloadImages(db.globalSettings.downloadImages);
+        }
+      }
+
+      // 7. Ticket Settings
+      if (result.data.ticketSettings && Object.keys(result.data.ticketSettings).length > 0) {
+        db.ticketSettings = result.data.ticketSettings;
+      }
+
+      db.accounts = fetchedAccounts;
+      db.sanggars = fetchedSanggars;
+      db.peserta = fetchedPeserta;
+      db.tickets = fetchedTickets;
+
+      saveDB(db);
+      globalThis.__FTMP_LAST_SYNC_TIME__ = Date.now();
+      return true;
+    }
+  } catch (err) {
+    console.warn('syncFromGoogleSheets failed, retaining cached data:', err);
+  }
+  return false;
 }
 
 export async function GET(req: NextRequest) {
@@ -282,161 +432,38 @@ export async function GET(req: NextRequest) {
 
     // 2. If not found locally and appscriptUrl is available, trigger an on-demand sync from Google Sheets
     if (!ticket && db.appscriptUrl) {
-      try {
-        const res = await fetch(db.appscriptUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'get_all_data' })
-        });
-        if (res.ok) {
-          const result = await res.json();
-          if (result.success && result.data && result.data.tickets) {
-            const fetchedTickets = (result.data.tickets || []).map((t: any) => ({
-              id: t.ID_Tiket || t.id || '',
-              namaPemesan: t.Nama_Pemesan || t.namaPemesan || '',
-              email: t.Email || t.email || '',
-              noHp: t.No_HP || t.noHp || '',
-              jumlah: Number(t.Jumlah_Tiket || t.jumlah) || 1,
-              kategori: t.Kategori || t.kategori || 'Reguler',
-              tanggalPementasan: t.Tanggal_Pementasan || t.tanggalPementasan || '',
-              kursi: typeof t.Daftar_Kursi === 'string' ? t.Daftar_Kursi.split(', ') : (Array.isArray(t.kursi) ? t.kursi : []),
-              status: t.Status_Pembayaran || t.status || 'Unpaid',
-              tanggalPesan: t.Waktu_Booking || t.tanggalPesan || '',
-              buktiPembayaran: t.Bukti_Pembayaran || t.buktiPembayaran || ''
-            }));
-
-            db.tickets = fetchedTickets;
-            saveDB(db);
-
-            // Re-search ticket
-            ticket = db.tickets?.find(t => t.id && t.id.trim().toLowerCase() === cleanId);
-          }
-        }
-      } catch (err) {
-        console.warn('Auto-sync failed during ticket search:', err);
-      }
+      await dbMutex.runExclusive(async () => {
+        await syncFromGoogleSheets(db);
+        ticket = db.tickets?.find(t => t.id && t.id.trim().toLowerCase() === cleanId);
+      });
     }
 
     if (ticket) return NextResponse.json({ success: true, booking: ticket });
     return NextResponse.json({ error: `Tiket #${rawId || ''} tidak ditemukan. Pastikan ID Tiket sudah sesuai.` }, { status: 404 });
   }
 
-  // Ambil parameter sync dari query string. Hanya lakukan tarik data Google Sheets jika sync=true (On-Demand)
-  const sync = searchParams.get('sync') === 'true';
+  // Best Practice SWR: Sinkronisasi otomatis jika ?sync=true ATAU jika cache lebih lama dari 25 detik
+  const forceSync = searchParams.get('sync') === 'true';
+  const now = Date.now();
+  const lastSync = globalThis.__FTMP_LAST_SYNC_TIME__ || 0;
+  const isStale = (now - lastSync) > 25000;
 
-  if (db.appscriptUrl && sync) {
+  if (db.appscriptUrl && (forceSync || isStale)) {
     await dbMutex.runExclusive(async () => {
-      try {
-        const res = await fetch(db.appscriptUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'get_all_data' })
-        });
-        if (res.ok) {
-          const result = await res.json();
-          if (result.success && result.data) {
-            // Map google sheets formats ke local format agar serasi
-            const fetchedAccounts = (result.data.accounts || []).map((acc: any) => ({
-              username: normStr(acc.Username || ''),
-              password: acc.Password || '',
-              npsn: sanitizeNpsn(acc.NPSN || acc.npsn || ''),
-              namaSekolah: acc.Nama_Sekolah || '',
-              namaSanggar: acc.Nama_Sanggar || '',
-              kontakPembina: acc.Kontak_Pembina || '',
-              email: acc.Email || '',
-              status: acc.Status_Verifikasi || 'Draft',
-              catatan: acc.Catatan_Verifikasi || '',
-              waktuDaftar: acc.Waktu_Pendaftaran || ''
-            }));
-
-            const fetchedSanggars = (result.data.sanggars || []).map((s: any) => ({
-              username: normStr(s.Username || ''),
-              namaSekolah: s.Nama_Sekolah || '',
-              namaSanggar: s.Nama_Sanggar || '',
-              kontakPembina: s.Kontak_Pembina || '',
-              email: s.Email || '',
-              naskahFile: s.Naskah_File_URL || '',
-              plotLampu: s.Plot_Lampu_URL || '',
-              poster: s.Poster_URL || '',
-              artistik: s.Desain_Artistik_URL || '',
-              sinopsis: s.Sinopsis_URL || '',
-              profilSanggar: s.Profil_Sanggar_URL || '',
-              buktiPembayaran: s.Bukti_Pembayaran_URL || '',
-              waktuUpdate: s.Waktu_Update || ''
-            }));
-
-            const fetchedPeserta = (result.data.peserta || []).map((p: any) => ({
-              username: normStr(p.Username || ''),
-              id: p.ID_Peserta || '',
-              nama: p.Nama_Sesuai_Ijazah || '',
-              peran: p.Peran_Kategori || '',
-              namaTokoh: p.Nama_Tokoh || '',
-              jenisKelamin: p.Jenis_Kelamin || '',
-              penyakitBawaan: p.Penyakit_Bawaan || '',
-              fotoFile: p.Foto_3x4_URL || '',
-              waktuUpdate: p.Waktu_Update || ''
-            }));
-
-            const fetchedTickets = (result.data.tickets || []).map((t: any) => ({
-              id: t.ID_Tiket || '',
-              namaPemesan: t.Nama_Pemesan || '',
-              email: t.Email || '',
-              noHp: t.No_HP || '',
-              jumlah: Number(t.Jumlah_Tiket) || 1,
-              kategori: t.Kategori || 'Reguler',
-              tanggalPementasan: t.Tanggal_Pementasan || '',
-              kursi: t.Daftar_Kursi ? t.Daftar_Kursi.split(', ') : [],
-              status: t.Status_Pembayaran || 'Unpaid',
-              tanggalPesan: t.Waktu_Booking || '',
-              buktiPembayaran: t.Bukti_Pembayaran || ''
-            }));
-
-            // Parse scripts from Spreadsheet
-            if (result.data.scripts && result.data.scripts.length > 0) {
-              db.scripts = result.data.scripts.map((s: any) => ({
-                id: s.ID_Script || s.id || '',
-                judul: s.Judul || '',
-                pengarang: s.Pengarang || s.Penulis || '',
-                sinopsis: s.Sinopsis || '',
-                fileUrl: s.File_URL || s.fileUrl || '',
-                size: s.Ukuran || s.size || ''
-              }));
-            }
-
-            // Parse settings from Spreadsheet
-            if (result.data.settings && result.data.settings.length > 0) {
-              const settingsMap: any = {};
-              result.data.settings.forEach((item: any) => {
-                if (item.Key) {
-                  settingsMap[item.Key] = item.Value !== undefined ? item.Value : '';
-                }
-              });
-              db.globalSettings = { ...db.globalSettings, ...settingsMap };
-              if (db.globalSettings.downloadImages !== undefined) {
-                db.globalSettings.downloadImages = parseDownloadImages(db.globalSettings.downloadImages);
-              }
-            }
-
-            if (result.data.ticketSettings) {
-              db.ticketSettings = result.data.ticketSettings;
-            }
-
-            // Google Sheets adalah Sumber Kebenaran Utama (Source of Truth).
-            // Ketika sinkronisasi online berhasil, perbarui local cache seutuhnya agar sinkron sempurna dengan lembar kerja.
-            db.accounts = fetchedAccounts;
-            db.sanggars = fetchedSanggars;
-            db.peserta = fetchedPeserta;
-            db.tickets = fetchedTickets;
-            saveDB(db);
-          }
-        }
-      } catch (err) {
-        console.warn('Apps Script fetch failed, using cached ftmp_db.json cache:', err);
+      const currentLastSync = globalThis.__FTMP_LAST_SYNC_TIME__ || 0;
+      if (forceSync || (Date.now() - currentLastSync) > 25000) {
+        await syncFromGoogleSheets(db);
       }
     });
   }
 
-  return NextResponse.json(db);
+  return NextResponse.json(db, {
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    }
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -448,9 +475,13 @@ export async function POST(req: NextRequest) {
 
       // 1. Simpan/Ubah URL Apps Script
       if (action === 'update_appscript_url') {
-        db.appscriptUrl = payload.url || '';
+        db.appscriptUrl = (payload.url || '').trim();
         saveDB(db);
-        return NextResponse.json({ success: true, appscriptUrl: db.appscriptUrl });
+        let synced = false;
+        if (db.appscriptUrl) {
+          synced = await syncFromGoogleSheets(db);
+        }
+        return NextResponse.json({ success: true, synced, appscriptUrl: db.appscriptUrl });
       }
 
       // 2. Setup Sheets otomatis di Google Sheets
@@ -841,23 +872,33 @@ export async function POST(req: NextRequest) {
         db.globalSettings = { ...db.globalSettings, ...cleanedPayload };
         saveDB(db);
         
+        let synced = false;
         if (db.appscriptUrl) {
           try {
             const dataToSync = {
               ...db.globalSettings,
               downloadImages: JSON.stringify(db.globalSettings.downloadImages || [])
             };
-            await fetch(db.appscriptUrl, {
+            const res = await fetch(db.appscriptUrl, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ action: 'save_global_settings', data: dataToSync })
             });
+            if (res.ok) {
+              synced = true;
+              globalThis.__FTMP_LAST_SYNC_TIME__ = Date.now();
+            }
           } catch (err) {
             console.error('Failed to sync settings:', err);
           }
         }
         
-        return NextResponse.json({ success: true, message: 'Pengaturan berhasil diperbarui' });
+        return NextResponse.json({ 
+          success: true, 
+          synced, 
+          message: synced ? 'Pengaturan berhasil diperbarui dan disinkronkan ke Google Sheets.' : 'Pengaturan berhasil diperbarui.',
+          globalSettings: db.globalSettings
+        });
       }
 
       // 11. Manage scripts
@@ -865,19 +906,24 @@ export async function POST(req: NextRequest) {
         db.scripts = payload.scripts || [];
         saveDB(db);
         
+        let synced = false;
         if (db.appscriptUrl) {
           try {
-            await fetch(db.appscriptUrl, {
+            const res = await fetch(db.appscriptUrl, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ action: 'manage_scripts', data: { scripts: db.scripts } })
             });
+            if (res.ok) {
+              synced = true;
+              globalThis.__FTMP_LAST_SYNC_TIME__ = Date.now();
+            }
           } catch (err) {
             console.error('Failed to sync scripts:', err);
           }
         }
         
-        return NextResponse.json({ success: true, scripts: db.scripts });
+        return NextResponse.json({ success: true, synced, scripts: db.scripts });
       }
 
       // 12. Manage ticket settings
@@ -885,19 +931,24 @@ export async function POST(req: NextRequest) {
         db.ticketSettings = payload.ticketSettings || {};
         saveDB(db);
         
+        let synced = false;
         if (db.appscriptUrl) {
           try {
-            await fetch(db.appscriptUrl, {
+            const res = await fetch(db.appscriptUrl, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ action: 'manage_ticket_settings', data: { ticketSettings: db.ticketSettings } })
             });
+            if (res.ok) {
+              synced = true;
+              globalThis.__FTMP_LAST_SYNC_TIME__ = Date.now();
+            }
           } catch (err) {
             console.error('Failed to sync ticket settings:', err);
           }
         }
         
-        return NextResponse.json({ success: true, ticketSettings: db.ticketSettings });
+        return NextResponse.json({ success: true, synced, ticketSettings: db.ticketSettings });
       }
 
       return NextResponse.json({ error: 'Aksi tidak diketahui' }, { status: 400 });

@@ -824,7 +824,7 @@ export default function RegistrationSection({ onRegisterSuccess, sessionUser, se
       const data = await res.json();
       if (data.success) {
         showNotification('success', 'Daftar Naskah sukses diperbarui.');
-        await fetchDataset();
+        await fetchDataset(true);
         if (onRefresh) onRefresh();
       } else {
         showNotification('err', data.error || 'Gagal update naskah');
@@ -847,7 +847,7 @@ export default function RegistrationSection({ onRegisterSuccess, sessionUser, se
       const data = await res.json();
       if (data.success) {
         showNotification('success', 'Pengaturan Tiket sukses diperbarui.');
-        await fetchDataset();
+        await fetchDataset(true);
         if (onRefresh) onRefresh();
       } else {
         showNotification('err', data.error || 'Gagal update pengaturan tiket');
@@ -931,6 +931,7 @@ export default function RegistrationSection({ onRegisterSuccess, sessionUser, se
       const data = await res.json();
       if (data.success) {
         showNotification('success', 'Pengaturan Publikasi Website berhasil diperbarui.');
+        await fetchDataset(true);
         if (onRefresh) onRefresh();
       } else {
         showNotification('err', data.message || 'Gagal update setting');

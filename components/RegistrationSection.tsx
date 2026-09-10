@@ -148,6 +148,7 @@ export default function RegistrationSection({ onRegisterSuccess, sessionUser, se
 
   // Dynamic file upload labels/filenames
   const [uploadedNames, setUploadedNames] = useState<Record<string, string>>({});
+  const [uploadingFields, setUploadingFields] = useState<Record<string, boolean>>({});
 
   // Dynamic participant list
   const [pesertaList, setPesertaList] = useState<Participant[]>([]);
@@ -537,6 +538,52 @@ export default function RegistrationSection({ onRegisterSuccess, sessionUser, se
     return url;
   };
 
+  const performInstantUpload = async (fieldName: string, baseString: string, genName: string) => {
+    if (!currentUser) return;
+    setUploadingFields(prev => ({ ...prev, [fieldName]: true }));
+    try {
+      // Build the complete school form payload so that we don't wipe out any current draft details
+      const payload = {
+        username: currentUser.username,
+        npsn: schoolForm.npsn || '',
+        namaSekolah: schoolForm.namaSekolah || '',
+        namaSanggar: schoolForm.namaSanggar || '',
+        kontakPembina: schoolForm.kontakPembina || '',
+        email: schoolForm.email || '',
+        // Keep existing file links or base64 strings, and update only the targeted field
+        naskahFile: fieldName === 'naskahFile' ? baseString : (schoolForm.naskahFile || ''),
+        plotLampu: fieldName === 'plotLampu' ? baseString : (schoolForm.plotLampu || ''),
+        poster: fieldName === 'poster' ? baseString : (schoolForm.poster || ''),
+        artistik: fieldName === 'artistik' ? baseString : (schoolForm.artistik || ''),
+        sinopsis: fieldName === 'sinopsis' ? baseString : (schoolForm.sinopsis || ''),
+        profilSanggar: fieldName === 'profilSanggar' ? baseString : (schoolForm.profilSanggar || ''),
+        buktiPembayaran: fieldName === 'buktiPembayaran' ? baseString : (schoolForm.buktiPembayaran || ''),
+      };
+
+      const res = await fetch('/api/data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'save_sanggar_data',
+          payload
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        showNotification('success', `Berkas berhasil diunggah & disimpan otomatis ke Google Drive!`);
+        // Sync online sheet to local cache and state, forcing sync from Google Apps Script
+        await fetchDataset(true);
+      } else {
+        showNotification('err', data.message || `Gagal menyimpan berkas.`);
+      }
+    } catch (err: any) {
+      showNotification('err', `Error unggah berkas: ${err.toString()}`);
+    } finally {
+      setUploadingFields(prev => ({ ...prev, [fieldName]: false }));
+    }
+  };
+
   const triggerBase64Upload = (e: React.ChangeEvent<HTMLInputElement>, fieldName: string) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -552,6 +599,7 @@ export default function RegistrationSection({ onRegisterSuccess, sessionUser, se
       const genName = getDriveFileName('doc', fieldName) + '.pdf';
       setSchoolForm(prev => ({ ...prev, [fieldName]: baseString }));
       setUploadedNames(prev => ({ ...prev, [fieldName]: genName }));
+      performInstantUpload(fieldName, baseString, genName);
     };
     reader.readAsDataURL(file);
   };
@@ -577,6 +625,7 @@ export default function RegistrationSection({ onRegisterSuccess, sessionUser, se
       const genName = getDriveFileName('doc', fieldName) + '.pdf';
       setSchoolForm(prev => ({ ...prev, [fieldName]: baseString }));
       setUploadedNames(prev => ({ ...prev, [fieldName]: genName }));
+      performInstantUpload(fieldName, baseString, genName);
     };
     reader.readAsDataURL(file);
   };
@@ -1498,7 +1547,12 @@ export default function RegistrationSection({ onRegisterSuccess, sessionUser, se
                   {/* Item 1: Naskah */}
                   <div className="p-4 border border-slate-200 rounded-2xl space-y-3 bg-slate-50/50">
                     <p className="text-xs font-bold text-slate-800">1. Draft Naskah Lakon</p>
-                    {schoolForm.naskahFile ? (
+                    {uploadingFields.naskahFile ? (
+                      <div className="border border-dashed border-amber-300 rounded-xl p-4 text-center bg-amber-50/10 flex flex-col items-center justify-center min-h-[82px]">
+                        <RefreshCw className="w-5 h-5 text-amber-500 animate-spin mb-1.5" />
+                        <span className="text-[10px] text-amber-600 font-extrabold uppercase tracking-wider animate-pulse">Mengunggah...</span>
+                      </div>
+                    ) : schoolForm.naskahFile ? (
                       <div className="space-y-1.5">
                         <span className="text-[10px] text-slate-500 font-mono block truncate">{uploadedNames.naskahFile || 'Berkas Naskah Siap'}</span>
                         <div className="flex gap-2">
@@ -1518,7 +1572,12 @@ export default function RegistrationSection({ onRegisterSuccess, sessionUser, se
                   {/* Item 2: Plot Lampu */}
                   <div className="p-4 border border-slate-200 rounded-2xl space-y-3 bg-slate-50/50">
                     <p className="text-xs font-bold text-slate-800">2. Plot Tata Lampu</p>
-                    {schoolForm.plotLampu ? (
+                    {uploadingFields.plotLampu ? (
+                      <div className="border border-dashed border-amber-300 rounded-xl p-4 text-center bg-amber-50/10 flex flex-col items-center justify-center min-h-[82px]">
+                        <RefreshCw className="w-5 h-5 text-amber-500 animate-spin mb-1.5" />
+                        <span className="text-[10px] text-amber-600 font-extrabold uppercase tracking-wider animate-pulse">Mengunggah...</span>
+                      </div>
+                    ) : schoolForm.plotLampu ? (
                       <div className="space-y-1.5">
                         <span className="text-[10px] text-slate-500 font-mono block truncate">{uploadedNames.plotLampu || 'Sketsa Plot Lampu'}</span>
                         <div className="flex gap-2">
@@ -1538,7 +1597,12 @@ export default function RegistrationSection({ onRegisterSuccess, sessionUser, se
                   {/* Item 3: Poster Pertunjukan */}
                   <div className="p-4 border border-slate-200 rounded-2xl space-y-3 bg-slate-50/50">
                     <p className="text-xs font-bold text-slate-800">3. Poster Pertunjukan</p>
-                    {schoolForm.poster ? (
+                    {uploadingFields.poster ? (
+                      <div className="border border-dashed border-amber-300 rounded-xl p-4 text-center bg-amber-50/10 flex flex-col items-center justify-center min-h-[82px]">
+                        <RefreshCw className="w-5 h-5 text-amber-500 animate-spin mb-1.5" />
+                        <span className="text-[10px] text-amber-600 font-extrabold uppercase tracking-wider animate-pulse">Mengunggah...</span>
+                      </div>
+                    ) : schoolForm.poster ? (
                       <div className="space-y-1.5">
                         <span className="text-[10px] text-slate-500 font-mono block truncate">{uploadedNames.poster || 'Poster Pertunjukan'}</span>
                         <div className="flex gap-2">
@@ -1558,7 +1622,12 @@ export default function RegistrationSection({ onRegisterSuccess, sessionUser, se
                   {/* Item 4: Artistik Stage */}
                   <div className="p-4 border border-slate-200 rounded-2xl space-y-3 bg-slate-50/50">
                     <p className="text-xs font-bold text-slate-800">4. Desain Artistik Panggung</p>
-                    {schoolForm.artistik ? (
+                    {uploadingFields.artistik ? (
+                      <div className="border border-dashed border-amber-300 rounded-xl p-4 text-center bg-amber-50/10 flex flex-col items-center justify-center min-h-[82px]">
+                        <RefreshCw className="w-5 h-5 text-amber-500 animate-spin mb-1.5" />
+                        <span className="text-[10px] text-amber-600 font-extrabold uppercase tracking-wider animate-pulse">Mengunggah...</span>
+                      </div>
+                    ) : schoolForm.artistik ? (
                       <div className="space-y-1.5">
                         <span className="text-[10px] text-slate-500 font-mono block truncate">{uploadedNames.artistik || 'Desain Artistik'}</span>
                         <div className="flex gap-2">
@@ -1578,7 +1647,12 @@ export default function RegistrationSection({ onRegisterSuccess, sessionUser, se
                   {/* Item 5: Ringkasan Sinopsis */}
                   <div className="p-4 border border-slate-200 rounded-2xl space-y-3 bg-slate-50/50">
                     <p className="text-xs font-bold text-slate-800">5. Sinopsis Lakon</p>
-                    {schoolForm.sinopsis ? (
+                    {uploadingFields.sinopsis ? (
+                      <div className="border border-dashed border-amber-300 rounded-xl p-4 text-center bg-amber-50/10 flex flex-col items-center justify-center min-h-[82px]">
+                        <RefreshCw className="w-5 h-5 text-amber-500 animate-spin mb-1.5" />
+                        <span className="text-[10px] text-amber-600 font-extrabold uppercase tracking-wider animate-pulse">Mengunggah...</span>
+                      </div>
+                    ) : schoolForm.sinopsis ? (
                       <div className="space-y-1.5">
                         <span className="text-[10px] text-slate-500 font-mono block truncate">{uploadedNames.sinopsis || 'Berkas Sinopsis'}</span>
                         <div className="flex gap-2">
@@ -1598,7 +1672,12 @@ export default function RegistrationSection({ onRegisterSuccess, sessionUser, se
                   {/* Item 6: Profil Sanggar */}
                   <div className="p-4 border border-slate-200 rounded-2xl space-y-3 bg-slate-50/50">
                     <p className="text-xs font-bold text-slate-800">6. Profil Sanggar Seni</p>
-                    {schoolForm.profilSanggar ? (
+                    {uploadingFields.profilSanggar ? (
+                      <div className="border border-dashed border-amber-300 rounded-xl p-4 text-center bg-amber-50/10 flex flex-col items-center justify-center min-h-[82px]">
+                        <RefreshCw className="w-5 h-5 text-amber-500 animate-spin mb-1.5" />
+                        <span className="text-[10px] text-amber-600 font-extrabold uppercase tracking-wider animate-pulse">Mengunggah...</span>
+                      </div>
+                    ) : schoolForm.profilSanggar ? (
                       <div className="space-y-1.5">
                         <span className="text-[10px] text-slate-500 font-mono block truncate">{uploadedNames.profilSanggar || 'Arsip Profil'}</span>
                         <div className="flex gap-2">
@@ -1811,7 +1890,12 @@ export default function RegistrationSection({ onRegisterSuccess, sessionUser, se
                   <div>
                     <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Unggah Bukti Transaksi Resmi</span>
                     
-                    {schoolForm.buktiPembayaran ? (
+                    {uploadingFields.buktiPembayaran ? (
+                      <div className="border border-dashed border-amber-300 rounded-2xl p-6 text-center bg-amber-50/10 flex flex-col items-center justify-center min-h-[114px]">
+                        <RefreshCw className="w-5 h-5 text-amber-500 animate-spin mb-1.5" />
+                        <span className="text-[10px] text-amber-600 font-extrabold uppercase tracking-wider animate-pulse">Mengunggah...</span>
+                      </div>
+                    ) : schoolForm.buktiPembayaran ? (
                       <div className="p-4 border border-emerald-100 rounded-2xl bg-emerald-50/20 space-y-2 text-center">
                         <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto" />
                         <span className="block text-xs font-bold text-emerald-800">Bukti Pembayaran Terpasang</span>

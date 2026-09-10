@@ -7,6 +7,8 @@ import * as os from 'os';
 const LOCAL_DB_FILE = path.join(process.cwd(), 'ftmp_db.json');
 const TMP_DB_FILE = path.join(os.tmpdir(), 'ftmp_db.json');
 
+const HARDCODED_APPSCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwfLmr5wD5whowru67yJ51ePa2Wz7FCNos87QRAv-2ne2bnahpwAAHJAOZGxhrbc0Iccw/exec';
+
 declare global {
   var __FTMP_IN_MEMORY_DB__: DBState | undefined;
   var __FTMP_LAST_SYNC_TIME__: number | undefined;
@@ -124,10 +126,7 @@ function parseDownloadImages(raw: any): any[] {
 function getDB(): DBState {
   // 1. Return in-memory cached state if available in this Lambda/Node container
   if (globalThis.__FTMP_IN_MEMORY_DB__) {
-    const envAppScriptUrl = process.env.APPS_SCRIPT_URL?.trim() || process.env.NEXT_PUBLIC_APPS_SCRIPT_URL?.trim();
-    if (envAppScriptUrl && envAppScriptUrl !== '') {
-      globalThis.__FTMP_IN_MEMORY_DB__.appscriptUrl = envAppScriptUrl;
-    }
+    globalThis.__FTMP_IN_MEMORY_DB__.appscriptUrl = HARDCODED_APPSCRIPT_URL;
     return globalThis.__FTMP_IN_MEMORY_DB__;
   }
 
@@ -218,12 +217,8 @@ function getDB(): DBState {
     parsed.ticketSettings = defaultTicketSettings;
   }
   
-  const envAppScriptUrl = process.env.APPS_SCRIPT_URL?.trim() || process.env.NEXT_PUBLIC_APPS_SCRIPT_URL?.trim();
-  if (envAppScriptUrl && envAppScriptUrl !== '') {
-    parsed.appscriptUrl = envAppScriptUrl;
-  } else if (!parsed.appscriptUrl) {
-    parsed.appscriptUrl = 'https://script.google.com/macros/s/AKfycbwfLmr5wD5whowru67yJ51ePa2Wz7FCNos87QRAv-2ne2bnahpwAAHJAOZGxhrbc0Iccw/exec';
-  }
+  // Selalu gunakan hardcoded URL Apps Script sebagai master link
+  parsed.appscriptUrl = HARDCODED_APPSCRIPT_URL;
 
   if (!parsed.scripts || parsed.scripts.length === 0) parsed.scripts = DEFAULT_SCRIPTS;
   if (!parsed.globalSettings) parsed.globalSettings = {};
@@ -282,7 +277,7 @@ function saveDB(state: DBState) {
  * Tarik data terbaru dari Google Sheets sebagai Single Source of Truth
  */
 async function syncFromGoogleSheets(db: DBState): Promise<boolean> {
-  const url = db.appscriptUrl?.trim();
+  const url = db.appscriptUrl?.trim() || HARDCODED_APPSCRIPT_URL;
   if (!url || !url.startsWith('https://script.google.com/')) {
     return false;
   }

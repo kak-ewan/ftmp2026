@@ -1915,27 +1915,26 @@ export default function RegistrationSection({ onRegisterSuccess, sessionUser, se
                   <h3 className="font-bold text-xs text-amber-400 uppercase tracking-wider flex items-center gap-2">
                     <Database className="w-4 h-4 text-amber-500" /> Integrasi Google Apps Script &amp; Google Sheets URL
                   </h3>
-                  <span className="text-[9px] text-slate-400 font-mono bg-slate-800 px-2 py-0.5 rounded-md">Master Database URL</span>
+                  <span className="text-[9px] text-emerald-400 font-mono bg-slate-800 px-2 py-0.5 rounded-md">Locked (Hardcoded)</span>
                 </div>
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  URL Web App Google Apps Script digunakan oleh server untuk membaca &amp; menulis data Pendaftar, Tiket, dan Naskah secara langsung ke Google Sheets. Anda dapat memperbarui URL di bawah ini atau melalui variabel <code className="text-amber-300 bg-slate-950 px-1 py-0.5 rounded">APPS_SCRIPT_URL</code>.
+                  URL Web App Google Apps Script telah dikonfigurasi secara permanen langsung di dalam kode server aplikasi (<code className="text-emerald-400 font-bold">Hardcoded</code>) demi keamanan dan performa yang stabil.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-2 pt-1">
                   <input 
                     type="text" 
                     value={appscriptUrl}
-                    onChange={(e) => setAppscriptUrl(e.target.value)}
+                    readOnly
                     placeholder="https://script.google.com/macros/s/AKfy.../exec"
-                    className="flex-1 text-xs px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-amber-300 font-mono placeholder-slate-600 focus:outline-hidden focus:border-amber-500"
+                    className="flex-1 text-xs px-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-emerald-400 font-mono opacity-80 cursor-not-allowed focus:outline-hidden"
                   />
                   <div className="flex gap-2">
                     <button
                       type="button"
-                      onClick={handleSaveAppscriptUrl}
-                      disabled={isActionLoading}
-                      className="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-50 shrink-0"
+                      disabled
+                      className="px-4 py-2.5 bg-slate-800 text-slate-500 font-bold text-xs rounded-xl cursor-not-allowed shrink-0"
                     >
-                      Simpan URL
+                      Terkunci
                     </button>
                     <button
                       type="button"

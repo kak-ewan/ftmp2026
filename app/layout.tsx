@@ -13,8 +13,8 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: 'Festival Teater Modern Pelajar SMA/SMK/MA XXVI',
-  description: 'Portal Pendaftaran Online, Unduhan Naskah, Publikasi Informasi, & Tiketing Online Festival Teater Modern Pelajar Jatim/NTB 2026',
+  title: 'Festival Teater Modern Pelajar SMA/SMK/MA XXVI Se-NTB 2026',
+  description: 'Web Festival Teater Modern Pelajar SMA/SMK/MA XXVI Se-NTB 2026. Portal pendaftaran online, unduhan naskah, publikasi info, ticketing, dan dashboard admin terpadu.',
   icons: {
     icon: '/ftmp.png',
     shortcut: '/ftmp.png',

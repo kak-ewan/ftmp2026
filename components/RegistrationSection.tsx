@@ -1878,10 +1878,8 @@ export default function RegistrationSection({ onRegisterSuccess, sessionUser, se
               <p className="text-xl font-bold font-outfit text-amber-600 mt-1">{allAccounts.filter(a => a.status === 'Pending').length}</p>
             </div>
             <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs">
-              <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">TIKET TERJUAL</span>
-              <p className="text-xl font-bold font-outfit text-purple-600 mt-1">
-                {allTickets.reduce((sum, t) => sum + (t.status === 'Paid' ? t.jumlah : 0), 0)} Tiket
-              </p>
+              <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">TOTAL PEMAIN &amp; KRU</span>
+              <p className="text-xl font-bold font-outfit text-purple-600 mt-1">{allPeserta.length} Orang</p>
             </div>
           </div>
 
@@ -2637,65 +2635,7 @@ export default function RegistrationSection({ onRegisterSuccess, sessionUser, se
                 </div>
               )}
 
-              {/* LIST OF TICKET PURCHASE ENTRIES IN ADMIN PANEL VIEW */}
-              <div className="bg-white border border-slate-200 p-6 rounded-3xl">
-                <div className="flex justify-between items-center pb-2 border-b border-slate-100 mb-4">
-                  <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-widest">📋 Daftar Booking Tiket Penonton</h3>
-                  <span className="text-[10px] font-bold text-purple-600 px-2 py-0.5 bg-purple-50 rounded-full">{allTickets.length} Transaksi</span>
-                </div>
 
-                {allTickets.length === 0 ? (
-                  <p className="text-xs text-slate-450 text-center py-4">Belum ada pemesanan tiket penonton.</p>
-                ) : (
-                  <div className="overflow-x-auto border border-slate-100 rounded-xl">
-                    <table className="w-full text-left text-[10px] text-slate-700 min-w-[600px]">
-                      <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 uppercase font-bold">
-                        <tr>
-                          <th className="p-2.5">ID Tiket</th>
-                          <th className="p-2.5">Pemesan</th>
-                          <th className="p-2.5">Email</th>
-                          <th className="p-2.5">Jumlah</th>
-                          <th className="p-2.5">Kategori</th>
-                          <th className="p-2.5">Kursi</th>
-                          <th className="p-2.5 text-center">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 bg-white">
-                        {allTickets.map((t) => (
-                          <tr key={t.id} className="hover:bg-slate-50/40">
-                            <td className="p-2.5 font-mono font-bold text-slate-900">{t.id}</td>
-                            <td className="p-2.5 font-bold">{t.namaPemesan} <span className="text-[8px] text-slate-450">({t.noHp})</span></td>
-                            <td className="p-2.5 text-slate-500">{t.email}</td>
-                            <td className="p-2.5 font-semibold text-center">{t.jumlah}</td>
-                            <td className="p-2.5"><span className="px-1.5 py-0.5 rounded-full text-[8px] font-bold bg-slate-100 text-slate-600">{t.kategori}</span></td>
-                            <td className="p-2.5 font-mono text-[9px] text-slate-650">{t.kursi ? t.kursi.join(', ') : '-'}</td>
-                            <td className="p-2.5 text-center flex flex-col items-center gap-1">
-                               {t.buktiPembayaran ? (
-                                <a href={t.buktiPembayaran} target="_blank" rel="noreferrer" className="text-[8px] font-bold text-blue-600 hover:underline">Lihat Bukti</a>
-                               ) : (<span className="text-[8px] text-slate-400">-</span>)}
-                              <select
-                                value={t.status}
-                                onChange={(e) => handleAdminUpdateTicketPayment(t.id, e.target.value)}
-                                className={`px-2 py-1 flex-1 rounded-lg text-[9px] font-bold border transition-colors cursor-pointer focus:outline-hidden appearance-none text-center ${
-                                  t.status === 'Paid' 
-                                    ? 'bg-emerald-100 border-emerald-200 text-emerald-800' 
-                                    : t.status === 'Pending Verifikasi'
-                                    ? 'bg-amber-100 border-amber-200 text-amber-800'
-                                    : 'bg-red-100 border-red-200 text-red-800'
-                                }`}
-                              >
-                                <option value="Unpaid">Unpaid</option>
-                                <option value="Pending Verifikasi">Pending</option>
-                                <option value="Paid">Paid</option>
-                              </select>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
           )}
